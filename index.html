@@ -9,16 +9,12 @@
         tailwind.config = {
           darkMode: 'class',
           theme: {
-            extend: {
-              colors: {
-                // Custom extensions if needed
-              }
-            }
+            extend: {}
           }
         }
     </script>
     <script>
-        // Check local storage or system preference
+        // Check local storage or system preference BEFORE paint
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         } else {
@@ -28,75 +24,841 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
         body {
             font-family: 'Inter', sans-serif;
             overflow-x: hidden;
-            /* Default to light mode variables, overridden by .dark class in Tailwind or manually */
             background-color: #f8f9fa;
             color: #1a1a1a;
             transition: background-color 0.3s ease, color 0.3s ease;
         }
-
         .dark body {
             background-color: #050505;
             color: #ffffff;
         }
-        
         h1, h2, h3, h4, .serif {
             font-family: 'Playfair Display', serif;
         }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(100,100,100,0.2); border-radius: 4px; }
 
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
+        /* 3D transforms */
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+
+        /* Animations */
+        @keyframes spin-slow {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(360deg); }
         }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes scaleUp {
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes scaleUpGentle {
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes slideLeft {
+            to { transform: translateX(0); }
+        }
+        .animate-fade-up {
+            animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0; transform: translateY(20px);
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        .animate-scale-up {
+            animation: scaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0; transform: scale(0.95);
+        }
+        .animate-scale-up-gentle {
+            animation: scaleUpGentle 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0; transform: scale(0.98) translateY(-10px);
+        }
+        .animate-slide-left {
+            animation: slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            transform: translateX(100%);
         }
 
-        /* 3D Book Construction for Hero */
-        .book-3d {
-            transform-style: preserve-3d;
-            position: relative;
-        }
-        .book-face {
-            position: absolute;
-            backface-visibility: hidden; 
-        }
+        /* Book card host */
+        .book-card-host { display: block; perspective: 1000px; }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "rxjs": "https://esm.sh/rxjs@^7.8.2?conditions=es2015",
-    "rxjs/operators": "https://esm.sh/rxjs@^7.8.2/operators?conditions=es2015",
-    "rxjs/ajax": "https://esm.sh/rxjs@^7.8.2/ajax?conditions=es2015",
-    "rxjs/webSocket": "https://esm.sh/rxjs@^7.8.2/webSocket?conditions=es2015",
-    "rxjs/testing": "https://esm.sh/rxjs@^7.8.2/testing?conditions=es2015",
-    "rxjs/fetch": "https://esm.sh/rxjs@^7.8.2/fetch?conditions=es2015",
-    "@angular/platform-browser": "https://esm.sh/@angular/platform-browser@^21.1.3?external=rxjs",
-    "@angular/compiler": "https://esm.sh/@angular/compiler@^21.1.3?external=rxjs",
-    "@angular/core": "https://esm.sh/@angular/core@^21.1.3?external=rxjs",
-    "@angular/common": "https://esm.sh/@angular/common@^21.1.3?external=rxjs"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-[#050505] dark:text-white">
-    <app-root></app-root>
+
+    <!-- Search Overlay -->
+    <div id="searchOverlay" class="fixed inset-0 z-[90] flex flex-col items-center pt-20 md:pt-32 px-4 text-slate-900 dark:text-white hidden">
+        <div class="absolute inset-0 bg-white/95 dark:bg-black/95 backdrop-blur-md" onclick="closeSearch()"></div>
+        <div class="relative z-10 w-full max-w-5xl flex flex-col gap-8 animate-scale-up-gentle" onclick="event.stopPropagation()">
+            <div class="flex items-center gap-6 border-b border-black/10 dark:border-white/20 pb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-slate-400 dark:text-white/50 shrink-0">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                </svg>
+                <input id="searchInput" type="text" placeholder="Search by title, author, or tags..." class="w-full bg-transparent text-2xl md:text-4xl text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-white/30 focus:outline-none font-serif" oninput="updateSearch(this.value)">
+                <button onclick="closeSearch()" class="text-slate-400 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="searchResults" class="w-full max-h-[65vh] overflow-y-auto custom-scrollbar pr-2">
+                <div class="text-center text-slate-300 dark:text-white/20 py-20">
+                    <p class="text-sm uppercase tracking-[0.2em]">Begin typing to explore the collection</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Menu Overlay -->
+    <div id="menuOverlay" class="fixed inset-0 z-[80] flex justify-end hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="toggleMenu()"></div>
+        <div class="relative z-10 w-80 h-full bg-white dark:bg-[#0a0a0a] border-l border-black/10 dark:border-white/10 shadow-2xl p-8 flex flex-col animate-slide-left">
+            <div class="flex justify-between items-center mb-12">
+                <span class="serif font-bold text-xl text-slate-900 dark:text-white">Menu</span>
+                <button onclick="toggleMenu()" class="text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <nav id="menuNav" class="flex flex-col gap-6 text-lg font-light"></nav>
+            <div class="mt-auto pt-8 border-t border-black/10 dark:border-white/10">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-slate-500 dark:text-white/50 uppercase tracking-widest">Theme</span>
+                    <button onclick="toggleTheme()" id="menuThemeBtn" class="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 px-8 py-6 flex items-center justify-between transition-all duration-300 bg-gradient-to-b from-white/90 via-white/50 to-transparent dark:from-black/80 dark:via-black/50 dark:to-transparent pointer-events-none">
+        <div class="flex items-center gap-4 pointer-events-auto">
+            <div class="w-8 h-8 rounded-full border border-slate-300 dark:border-white/20 flex items-center justify-center text-slate-900 dark:text-white">
+                <span class="serif font-bold text-lg">D</span>
+            </div>
+            <span class="text-slate-900 dark:text-white font-light tracking-widest text-sm uppercase hidden md:block">The Dat Library</span>
+        </div>
+
+        <!-- Nav Dots -->
+        <nav id="navDots" class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden md:flex flex-row gap-4 pointer-events-auto"></nav>
+
+        <div class="flex items-center gap-6 pointer-events-auto">
+            <button onclick="openSearch()" class="text-slate-500 hover:text-slate-900 dark:text-white/70 dark:hover:text-white transition-colors" title="Search">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                </svg>
+            </button>
+            <button onclick="toggleTheme()" id="headerThemeBtn" class="text-slate-500 hover:text-slate-900 dark:text-white/70 dark:hover:text-white transition-colors" title="Toggle Theme">
+            </button>
+            <button onclick="toggleMenu()" class="text-slate-500 hover:text-slate-900 dark:text-white/70 dark:hover:text-white transition-colors" title="Menu">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Scroll Progress -->
+    <div id="scrollProgress" class="fixed top-0 left-0 h-1 z-50 transition-all duration-300 ease-out" style="width:0%"></div>
+
+    <main class="relative bg-slate-50 dark:bg-black transition-colors duration-500">
+
+        <!-- HERO SECTION -->
+        <section id="hero" class="min-h-screen relative flex items-center justify-center overflow-hidden">
+            <div class="absolute inset-0 opacity-30 pointer-events-none">
+                <div class="absolute top-1/4 left-1/4 w-2 h-2 bg-slate-400 dark:bg-white rounded-full animate-pulse shadow-[0_0_20px_gray] dark:shadow-[0_0_20px_white]"></div>
+                <div class="absolute top-3/4 left-1/2 w-1 h-1 bg-yellow-500 rounded-full animate-pulse shadow-[0_0_10px_gold]" style="animation-delay:1s"></div>
+                <div class="absolute top-1/2 right-1/4 w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse shadow-[0_0_15px_cyan]" style="animation-delay:2s"></div>
+            </div>
+            <div class="z-10 text-center flex flex-col items-center">
+                <div class="mb-12 relative w-64 h-96 perspective-1000">
+                    <div class="w-full h-full relative transform-style-3d cursor-pointer group" style="animation: spin-slow 20s linear infinite;">
+                        <!-- Front -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-gray-800 to-black rounded-r-md border-l-4 border-l-gray-700 flex items-center justify-center backface-hidden shadow-2xl overflow-hidden border border-white/10" style="transform: translateZ(10px);">
+                            <div class="relative z-10 p-6 border-2 border-yellow-500/30 m-4 h-[90%] flex flex-col justify-center items-center">
+                                <h2 class="serif text-2xl text-yellow-500 font-bold mb-2">Book of the Month</h2>
+                                <p class="text-xs tracking-widest uppercase text-white/60">Featured Collection</p>
+                            </div>
+                        </div>
+                        <!-- Back -->
+                        <div class="absolute inset-0 bg-gray-900 rounded-l-md border-r-4 border-r-gray-800 backface-hidden" style="transform: rotateY(180deg) translateZ(10px);"></div>
+                        <!-- Spine -->
+                        <div class="absolute top-0 bottom-0 w-10 bg-gray-800 flex items-center justify-center" style="transform: rotateY(90deg) translateX(-20px) translateZ(123px);">
+                            <span class="rotate-90 text-white/50 text-xs tracking-widest whitespace-nowrap">THE DAT LIBRARY</span>
+                        </div>
+                        <!-- Pages -->
+                        <div class="absolute top-2 bottom-2 right-2 w-[30px] bg-white" style="transform: rotateY(90deg) translateX(-15px) translateZ(120px);"></div>
+                    </div>
+                    <div class="absolute -bottom-12 left-1/2 -translate-x-1/2 w-32 h-4 bg-black/20 dark:bg-black/50 blur-xl rounded-[100%]"></div>
+                </div>
+
+                <h1 class="text-6xl md:text-8xl text-transparent bg-clip-text bg-gradient-to-b from-slate-900 via-slate-800 to-slate-400 dark:from-white dark:via-white dark:to-white/40 font-bold serif mb-6 tracking-tight animate-fade-up">
+                    Literary<br/>Gallery
+                </h1>
+                <p class="text-lg md:text-xl text-slate-500 dark:text-white/50 font-light tracking-wide max-w-lg mx-auto mb-12 animate-fade-up" style="animation-delay: 0.2s">
+                    Where stories meet art. Experience the world's finest digital collection in an immersive environment.
+                </p>
+                <button onclick="scrollToSection(CATEGORIES[0].id)" class="animate-bounce text-slate-400 dark:text-white/30 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">
+                    <span class="text-xs uppercase tracking-[0.3em]">Explore</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mx-auto mt-2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                    </svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Category Sections (generated by JS) -->
+        <div id="categorySections"></div>
+
+        <footer class="py-24 border-t border-slate-200 dark:border-white/10 text-center text-slate-400 dark:text-white/30 text-sm">
+            <p>&copy; 2026 The Dat Library. All rights reserved.</p>
+            <p class="mt-2">Designed by NhanNT.</p>
+        </footer>
+    </main>
+
+    <!-- Floating Action Button -->
+    <button id="fabBtn" onclick="scrollToSection('hero')" class="fixed bottom-8 right-8 w-12 h-12 rounded-full bg-slate-900 dark:bg-white text-white dark:text-black flex items-center justify-center shadow-lg transition-all duration-500 z-40 hover:scale-110 translate-y-24 opacity-0">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+        </svg>
+    </button>
+
+    <!-- Book Detail Modal -->
+    <div id="bookModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 text-slate-900 dark:text-white hidden">
+        <div class="absolute inset-0 bg-white/80 dark:bg-black/80 backdrop-blur-md" onclick="closeModal()"></div>
+        <div class="relative w-full max-w-6xl h-[90vh] bg-white dark:bg-[#0a0a0a] rounded-2xl border border-black/10 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row animate-scale-up">
+            <button onclick="closeModal()" class="absolute top-6 right-6 z-20 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors bg-white/20 dark:bg-black/20 p-2 rounded-full backdrop-blur-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <!-- Left Side: Visuals -->
+            <div id="modalVisual" class="w-full md:w-[55%] h-1/2 md:h-full relative bg-slate-100 dark:bg-[#111] flex items-center justify-center overflow-hidden transition-colors duration-500">
+                <div id="modalBg" class="absolute inset-0 opacity-10 dark:opacity-30"></div>
+                <div class="relative z-10 w-48 md:w-80 aspect-[2/3] shadow-2xl transform transition-transform duration-700 hover:scale-105 perspective-1000">
+                    <div class="w-full h-full rounded-lg relative transform-style-3d" style="transform: rotateY(-15deg);">
+                        <div id="modalCover" class="absolute inset-0 rounded-lg shadow-inner">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                            <div class="absolute bottom-8 left-8 right-8">
+                                <h1 id="modalTitle" class="serif text-3xl md:text-4xl font-bold text-white mb-2 leading-tight drop-shadow-md"></h1>
+                                <p id="modalAuthor" class="text-white/80 text-lg"></p>
+                            </div>
+                        </div>
+                        <div class="absolute top-0 bottom-0 left-0 w-8 bg-white/20 transform -translate-x-full origin-right" style="transform: translateX(-100%) rotateY(90deg);"></div>
+                    </div>
+                </div>
+                <div class="absolute bottom-8 left-0 right-0 flex justify-center gap-4 px-4">
+                    <div class="w-16 h-24 rounded border-2 border-slate-400 dark:border-white/50 bg-slate-300 dark:bg-gray-800 opacity-100 shadow-lg transform scale-110"></div>
+                    <div class="w-16 h-24 rounded border border-slate-300 dark:border-white/10 bg-slate-300 dark:bg-gray-800 opacity-50 hover:opacity-100 transition-opacity"></div>
+                    <div class="w-16 h-24 rounded border border-slate-300 dark:border-white/10 bg-slate-300 dark:bg-gray-800 opacity-50 hover:opacity-100 transition-opacity"></div>
+                </div>
+            </div>
+            <!-- Right Side: Details -->
+            <div class="w-full md:w-[45%] h-1/2 md:h-full overflow-y-auto p-8 md:p-12 custom-scrollbar">
+                <div id="modalTags" class="flex flex-wrap gap-2 mb-6"></div>
+                <h2 id="modalDetailTitle" class="text-3xl font-bold mb-2 text-slate-900 dark:text-white"></h2>
+                <p id="modalSubtitle" class="text-xl text-slate-500 dark:text-white/50 serif italic mb-8"></p>
+                <div class="space-y-6 text-slate-600 dark:text-white/80 leading-relaxed font-light text-sm md:text-base">
+                    <p id="modalDesc"></p>
+                    <p>This edition features a completely remastered layout, optimized for high-resolution digital displays. Experience the narrative with unprecedented clarity.</p>
+                    <div class="bg-slate-50 dark:bg-white/5 rounded-xl p-6 border border-slate-200 dark:border-white/10 mt-8">
+                        <h3 class="text-slate-900 dark:text-white font-bold mb-4 uppercase tracking-widest text-xs">Specifications</h3>
+                        <div class="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
+                            <div><span class="block text-slate-400 dark:text-white/40 text-xs mb-1">Length</span><span id="modalPages"></span></div>
+                            <div><span class="block text-slate-400 dark:text-white/40 text-xs mb-1">Format</span><span id="modalFormat"></span></div>
+                            <div><span class="block text-slate-400 dark:text-white/40 text-xs mb-1">Language</span><span id="modalLang"></span></div>
+                            <div><span class="block text-slate-400 dark:text-white/40 text-xs mb-1">File Size</span><span id="modalSize"></span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-10 flex gap-4">
+                    <button class="flex-1 bg-slate-900 dark:bg-white text-white dark:text-black py-4 rounded-lg font-bold tracking-wide hover:bg-slate-800 dark:hover:bg-gray-200 transition-colors">PREVIEW SAMPLE</button>
+                    <button class="px-6 py-4 rounded-lg border border-slate-300 dark:border-white/20 hover:border-slate-900 dark:hover:border-white hover:bg-slate-50 dark:hover:bg-white/5 transition-all text-slate-900 dark:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ==================== DATA ====================
+const CATEGORIES = [
+    {
+        id: 'business',
+        name: 'Business & Leadership',
+        tagline: 'Master the art of success',
+        accentColor: '#FFD700',
+        layout: 'spotlight',
+        books: [
+            { id: 'b1', title: 'Zero to One', author: 'Peter Thiel', year: 2014, description: 'Notes on startups, or how to build the future. The next Bill Gates will not build an operating system. The next Larry Page or Sergey Brin won\'t make a search engine.', gradient: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)', category: 'Business', specs: { pages: 224, language: 'English', format: 'PDF', fileSize: '4MB' }, tags: ['Startup', 'Innovation', 'Strategy'] },
+            { id: 'b2', title: 'The Lean Startup', author: 'Eric Ries', year: 2011, description: 'How Today\'s Entrepreneurs Use Continuous Innovation to Create Radically Successful Businesses.', gradient: 'linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%)', category: 'Business', specs: { pages: 336, language: 'English', format: 'ePub', fileSize: '6MB' }, tags: ['Management', 'Product', 'Agile'] },
+            { id: 'b3', title: 'Principles', author: 'Ray Dalio', year: 2017, description: 'Ray Dalio shares the unconventional principles that he\'s developed, refined, and used over the past forty years to create unique results.', gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', category: 'Business', specs: { pages: 592, language: 'English', format: 'PDF', fileSize: '12MB' }, tags: ['Life', 'Work', 'Philosophy'] },
+            { id: 'b4', title: 'Thinking, Fast and Slow', author: 'Daniel Kahneman', year: 2011, description: 'The major New York Times bestseller that has changed the way we think about thinking.', gradient: 'linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%)', category: 'Business', specs: { pages: 499, language: 'English', format: 'PDF', fileSize: '8MB' }, tags: ['Psychology', 'Decision Making', 'Economics'] },
+            { id: 'b5', title: 'Good to Great', author: 'Jim Collins', year: 2001, description: 'Can a good company become a great company and if so, how?', gradient: 'linear-gradient(135deg, #232526 0%, #414345 100%)', category: 'Business', specs: { pages: 300, language: 'English', format: 'ePub', fileSize: '5MB' }, tags: ['Management', 'Leadership', 'Research'] },
+            { id: 'b6', title: 'Deep Work', author: 'Cal Newport', year: 2016, description: 'Rules for Focused Success in a Distracted World.', gradient: 'linear-gradient(135deg, #0F2027 0%, #203A43 50%, #2C5364 100%)', category: 'Business', specs: { pages: 304, language: 'English', format: 'PDF', fileSize: '3MB' }, tags: ['Productivity', 'Focus', 'Career'] }
+        ]
+    },
+    {
+        id: 'tech',
+        name: 'Technology & Innovation',
+        tagline: 'Shaping the digital frontier',
+        accentColor: '#00D9FF',
+        layout: 'grid',
+        books: [
+            { id: 't1', title: 'Clean Code', author: 'Robert C. Martin', year: 2008, description: 'Even bad code can function. But if code isn\'t clean, it can bring a development organization to its knees.', gradient: 'linear-gradient(135deg, #00c6ff 0%, #0072ff 100%)', category: 'Technology', specs: { pages: 464, language: 'English', format: 'PDF', fileSize: '15MB' }, tags: ['Programming', 'Best Practices', 'Software'] },
+            { id: 't2', title: 'The Pragmatic Programmer', author: 'Andrew Hunt', year: 1999, description: 'One of the most significant books in my life. Obsolete in some areas, but the concepts are timeless.', gradient: 'linear-gradient(135deg, #e65c00 0%, #F9D423 100%)', category: 'Technology', specs: { pages: 352, language: 'English', format: 'ePub', fileSize: '7MB' }, tags: ['Career', 'Craftsmanship', 'Coding'] },
+            { id: 't3', title: 'Design Patterns', author: 'Gang of Four', year: 1994, description: 'Elements of Reusable Object-Oriented Software. The classic book on software patterns.', gradient: 'linear-gradient(135deg, #1A2980 0%, #26D0CE 100%)', category: 'Technology', specs: { pages: 395, language: 'English', format: 'PDF', fileSize: '18MB' }, tags: ['Architecture', 'OOP', 'Classic'] },
+            { id: 't4', title: 'Structure & Interpretation', author: 'Abelson & Sussman', year: 1996, description: 'SICP is the wizard book. It teaches you how to think about computation.', gradient: 'linear-gradient(135deg, #614385 0%, #516395 100%)', category: 'Technology', specs: { pages: 657, language: 'English', format: 'PDF', fileSize: '22MB' }, tags: ['CS', 'Lisp', 'Fundamentals'] },
+            { id: 't5', title: "You Don't Know JS", author: 'Kyle Simpson', year: 2015, description: 'A deep dive into the core mechanisms of the JavaScript language.', gradient: 'linear-gradient(135deg, #F7971E 0%, #FFD200 100%)', category: 'Technology', specs: { pages: 200, language: 'English', format: 'ePub', fileSize: '2MB' }, tags: ['JavaScript', 'Web', 'Deep Dive'] },
+            { id: 't6', title: 'Designing Data-Intensive Apps', author: 'Martin Kleppmann', year: 2017, description: 'The big ideas behind reliable, scalable, and maintainable systems.', gradient: 'linear-gradient(135deg, #AA076B 0%, #61045F 100%)', category: 'Technology', specs: { pages: 616, language: 'English', format: 'PDF', fileSize: '14MB' }, tags: ['Distributed Systems', 'Data', 'Architecture'] }
+        ]
+    },
+    {
+        id: 'fiction',
+        name: 'Literary Fiction',
+        tagline: 'Worlds within words',
+        accentColor: '#9D4EDD',
+        layout: 'carousel',
+        books: [
+            { id: 'f1', title: '1984', author: 'George Orwell', year: 1949, description: 'Among the seminal texts of the 20th century, Nineteen Eighty-Four is a rare work that grows more haunting as its futuristic purgatory becomes more real.', gradient: 'linear-gradient(135deg, #20002c 0%, #cbb4d4 100%)', category: 'Fiction', specs: { pages: 328, language: 'English', format: 'ePub', fileSize: '3MB' }, tags: ['Dystopia', 'Classic', 'Political'] },
+            { id: 'f2', title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', year: 1925, description: 'The story of the fabulously wealthy Jay Gatsby and his new love for the beautiful Daisy Buchanan.', gradient: 'linear-gradient(135deg, #DA4453 0%, #89216B 100%)', category: 'Fiction', specs: { pages: 180, language: 'English', format: 'PDF', fileSize: '2MB' }, tags: ['Classic', 'American Dream', 'Romance'] },
+            { id: 'f3', title: 'Pride and Prejudice', author: 'Jane Austen', year: 1813, description: 'Since its immediate success in 1813, Pride and Prejudice has remained one of the most popular novels in the English language.', gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)', category: 'Fiction', specs: { pages: 279, language: 'English', format: 'ePub', fileSize: '4MB' }, tags: ['Romance', 'Classic', 'Satire'] },
+            { id: 'f4', title: 'Dune', author: 'Frank Herbert', year: 1965, description: 'Set on the desert planet Arrakis, Dune is the story of the boy Paul Atreides, heir to a noble family tasked with ruling an inhospitable world where the only thing of value is the "spice" melange.', gradient: 'linear-gradient(135deg, #eacda3 0%, #d6ae7b 100%)', category: 'Fiction', specs: { pages: 412, language: 'English', format: 'PDF', fileSize: '10MB' }, tags: ['Sci-Fi', 'Epic', 'Adventure'] },
+            { id: 'f5', title: 'The Catcher in the Rye', author: 'J.D. Salinger', year: 1951, description: 'The hero-narrator of The Catcher in the Rye is an ancient child of sixteen, a native New Yorker named Holden Caulfield.', gradient: 'linear-gradient(135deg, #93291E 0%, #ED213A 100%)', category: 'Fiction', specs: { pages: 234, language: 'English', format: 'ePub', fileSize: '3MB' }, tags: ['Classic', 'Coming of Age', 'Literary'] },
+            { id: 'f6', title: 'Brave New World', author: 'Aldous Huxley', year: 1932, description: 'A searching vision of an unequal, technologically-advanced future where humans are genetically bred.', gradient: 'linear-gradient(135deg, #000000 0%, #434343 100%)', category: 'Fiction', specs: { pages: 311, language: 'English', format: 'PDF', fileSize: '4MB' }, tags: ['Dystopia', 'Sci-Fi', 'Classic'] },
+            { id: 'f7', title: 'Fahrenheit 451', author: 'Ray Bradbury', year: 1953, description: 'Guy Montag is a fireman. His job is to destroy the most illegal of commodities, the printed book, along with the houses in which they are hidden.', gradient: 'linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%)', category: 'Fiction', specs: { pages: 249, language: 'English', format: 'ePub', fileSize: '3MB' }, tags: ['Dystopia', 'Censorship', 'Classic'] },
+            { id: 'f8', title: 'The Hobbit', author: 'J.R.R. Tolkien', year: 1937, description: 'In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole, filled with the ends of worms and an oozy smell.', gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', category: 'Fiction', specs: { pages: 310, language: 'English', format: 'PDF', fileSize: '5MB' }, tags: ['Fantasy', 'Adventure', 'Classic'] }
+        ]
+    },
+    {
+        id: 'science',
+        name: 'Science & Nature',
+        tagline: 'Understanding our universe',
+        accentColor: '#00FF87',
+        layout: 'grid',
+        books: [
+            { id: 's1', title: 'Cosmos', author: 'Carl Sagan', year: 1980, description: 'The story of cosmic evolution, science and civilization. Sagan traces the origins of knowledge and the scientific method.', gradient: 'linear-gradient(135deg, #021B79 0%, #0575E6 100%)', category: 'Science', specs: { pages: 365, language: 'English', format: 'PDF', fileSize: '16MB' }, tags: ['Space', 'History', 'Physics'] },
+            { id: 's2', title: 'Sapiens', author: 'Yuval Noah Harari', year: 2011, description: 'A Brief History of Humankind. One hundred thousand years ago, at least six different species of humans inhabited Earth.', gradient: 'linear-gradient(135deg, #D38312 0%, #A83279 100%)', category: 'Science', specs: { pages: 443, language: 'English', format: 'ePub', fileSize: '9MB' }, tags: ['History', 'Anthropology', 'Biology'] },
+            { id: 's3', title: 'A Brief History of Time', author: 'Stephen Hawking', year: 1988, description: 'A landmark volume in science writing by one of the great minds of our time, exploring such profound questions as: How did the universe begin?', gradient: 'linear-gradient(135deg, #000428 0%, #004e92 100%)', category: 'Science', specs: { pages: 212, language: 'English', format: 'PDF', fileSize: '5MB' }, tags: ['Physics', 'Cosmology', 'Space'] },
+            { id: 's4', title: 'The Selfish Gene', author: 'Richard Dawkins', year: 1976, description: "Professor Dawkins articulates a gene's eye view of evolution - a view giving centre stage to these persistent units of information.", gradient: 'linear-gradient(135deg, #134E5E 0%, #71B280 100%)', category: 'Science', specs: { pages: 360, language: 'English', format: 'PDF', fileSize: '7MB' }, tags: ['Biology', 'Evolution', 'Genetics'] },
+            { id: 's5', title: 'Silent Spring', author: 'Rachel Carson', year: 1962, description: 'Rarely does a single book alter the course of history, but Silent Spring did exactly that by spurring a revolutionary new environmental movement.', gradient: 'linear-gradient(135deg, #56ab2f 0%, #a8e063 100%)', category: 'Science', specs: { pages: 368, language: 'English', format: 'ePub', fileSize: '4MB' }, tags: ['Environment', 'Ecology', 'Nature'] },
+            { id: 's6', title: 'The Gene', author: 'Siddhartha Mukherjee', year: 2016, description: 'The story of the gene begins in an obscure Augustinian abbey in Moravia in 1856, where a monk stumbles on the idea of a "unit of heredity".', gradient: 'linear-gradient(135deg, #4568DC 0%, #B06AB3 100%)', category: 'Science', specs: { pages: 592, language: 'English', format: 'PDF', fileSize: '12MB' }, tags: ['Genetics', 'History', 'Biology'] }
+        ]
+    }
+];
+
+// ==================== STATE ====================
+let activeSection = 'hero';
+let isDark = document.documentElement.classList.contains('dark');
+let activeBook = null;
+let searchQuery = '';
+let carouselIntervals = [];
+
+// ==================== HELPERS ====================
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getAllBooks() {
+    return CATEGORIES.flatMap(c => c.books);
+}
+
+function getCurrentAccentColor() {
+    if (activeSection === 'hero') return isDark ? '#ffffff' : '#000000';
+    const cat = CATEGORIES.find(c => c.id === activeSection);
+    return cat ? cat.accentColor : (isDark ? '#ffffff' : '#000000');
+}
+
+// ==================== BOOK CARD HTML ====================
+function createBookCardHTML(book, accentColor) {
+    const spineGradient = `linear-gradient(90deg, #111 0%, transparent 20%, transparent 80%, #111 100%), ${book.gradient}`;
+    const backGradient = `linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.6)), ${book.gradient}`;
+    const interiorGradient = `linear-gradient(to right, #fcfaf5 0%, #fff 5%, #fff 95%, #ddd 100%)`;
+
+    return `<div class="book-card-host" data-book-id="${book.id}" data-accent="${accentColor}">
+    <div class="book-card relative w-full aspect-[2/3] cursor-pointer group">
+        <div class="book-card-inner w-full h-full rounded-lg shadow-2xl transition-transform duration-100 ease-out will-change-transform transform-style-3d relative" style="box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);">
+            <!-- 0: Front Cover -->
+            <div class="book-view absolute inset-0 w-full h-full rounded-lg overflow-hidden transition-opacity duration-500 flex flex-col justify-end p-6 border border-black/5 dark:border-white/10" data-view="0" style="background:${book.gradient}; opacity:1;">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                <div class="relative z-10">
+                    <h3 class="text-xl font-bold text-white serif mb-1 leading-tight drop-shadow-md">${escapeHtml(book.title)}</h3>
+                    <p class="text-sm text-white/80 font-light">${escapeHtml(book.author)}</p>
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+            </div>
+            <!-- 1: Angled View -->
+            <div class="book-view absolute inset-0 w-full h-full rounded-lg overflow-hidden transition-opacity duration-500 flex items-center justify-center bg-zinc-100 border border-black/5" data-view="1" style="opacity:0;">
+                <div class="w-3/4 h-3/4 rounded relative transform -rotate-12 scale-90 shadow-2xl" style="background:${book.gradient}">
+                    <div class="absolute left-0 top-0 bottom-0 w-2 bg-white/20 blur-[1px]"></div>
+                </div>
+                <span class="absolute bottom-4 text-xs text-slate-400 tracking-widest uppercase">Perspective</span>
+            </div>
+            <!-- 2: Spine View -->
+            <div class="book-view absolute inset-0 w-full h-full rounded-lg overflow-hidden transition-opacity duration-500 flex flex-col items-center justify-center bg-zinc-100 border border-black/5" data-view="2" style="opacity:0;">
+                <div class="w-16 h-full shadow-2xl flex flex-col items-center justify-center relative" style="background:${spineGradient}">
+                    <span class="rotate-90 text-white font-bold whitespace-nowrap text-lg tracking-wider">${escapeHtml(book.title)}</span>
+                    <div class="absolute bottom-10 w-8 h-8 rounded-full bg-white/20"></div>
+                </div>
+                <span class="absolute bottom-4 text-xs text-slate-400 tracking-widest uppercase">Spine</span>
+            </div>
+            <!-- 3: Back Cover -->
+            <div class="book-view absolute inset-0 w-full h-full rounded-lg overflow-hidden transition-opacity duration-500 p-6 border border-black/5 dark:border-white/10 flex flex-col items-center justify-center text-center" data-view="3" style="background:${backGradient}; opacity:0;">
+                <div class="text-white/90 text-xs leading-relaxed italic line-clamp-6 mb-4">"${escapeHtml(book.description)}"</div>
+                <div class="text-[10px] text-white/40 uppercase tracking-widest">Praise for ${escapeHtml(book.author)}</div>
+                <span class="absolute bottom-4 text-xs text-white/50 tracking-widest uppercase">Back Cover</span>
+            </div>
+            <!-- 4: Interior 1 -->
+            <div class="book-view absolute inset-0 w-full h-full rounded-lg overflow-hidden transition-opacity duration-500 border border-black/5 dark:border-white/10 p-4" data-view="4" style="background:${interiorGradient}; opacity:0;">
+                <div class="w-full h-full flex flex-col text-[8px] text-black/60 overflow-hidden select-none font-serif leading-relaxed opacity-70">
+                    <h4 class="text-base text-black mb-4 font-bold text-center">Chapter One</h4>
+                    <p class="mb-2 text-justify">It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in</p>
+                    <p class="text-justify">order to escape the vile wind, slipped quickly through the glass doors of Victory Mansions, though not quickly enough to prevent a swirl of gritty dust from entering along with him.</p>
+                    <p class="text-justify indent-2">The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster, too large for indoor display, had been tacked to the wall.</p>
+                </div>
+                <span class="absolute bottom-2 right-4 text-[8px] text-black/30">1</span>
+            </div>
+            <!-- 5: Interior 2 -->
+            <div class="book-view absolute inset-0 w-full h-full rounded-lg overflow-hidden transition-opacity duration-500 border border-black/5 dark:border-white/10 p-4" data-view="5" style="background:${interiorGradient}; opacity:0;">
+                <div class="w-full h-full flex flex-col text-[8px] text-black/60 overflow-hidden select-none font-serif leading-relaxed opacity-70">
+                    <div class="w-full h-24 bg-black/5 mb-4 rounded flex items-center justify-center">
+                        <span class="text-[6px] uppercase tracking-widest opacity-50">Illustration</span>
+                    </div>
+                    <p class="text-justify">It depicted simply an enormous face, more than a meter wide: the face of a man of about forty-five, with a heavy black moustache and ruggedly handsome features.</p>
+                    <p class="text-justify indent-2">Winston made for the stairs. It was no use trying the lift.</p>
+                </div>
+                <span class="absolute bottom-2 right-4 text-[8px] text-black/30">2</span>
+            </div>
+        </div>
+    </div>
+</div>`;
+}
+
+// ==================== RENDER SECTIONS ====================
+function renderCategories() {
+    const container = document.getElementById('categorySections');
+    let html = '';
+
+    CATEGORIES.forEach(category => {
+        html += `<section id="${category.id}" class="min-h-screen py-32 px-6 md:px-16 flex flex-col justify-center relative border-t border-slate-200 dark:border-white/5 transition-colors duration-500">
+            <div class="absolute top-0 right-0 w-1/2 h-1/2 blur-[120px] pointer-events-none" style="background: linear-gradient(to bottom, ${category.accentColor}0D, transparent);"></div>
+            <div class="relative z-10 mb-16 max-w-4xl mx-auto w-full text-center md:text-left flex flex-col md:flex-row items-end justify-between gap-8">
+                <div>
+                    <h2 class="text-4xl md:text-6xl font-bold serif mb-4" style="color:${category.accentColor}">${escapeHtml(category.name)}</h2>
+                    <p class="text-xl text-slate-500 dark:text-white/60 font-light">${escapeHtml(category.tagline)}</p>
+                </div>
+                <div class="hidden md:block w-32 h-[1px] bg-gradient-to-r from-slate-300 to-transparent dark:from-white/20"></div>
+            </div>`;
+
+        if (category.layout === 'spotlight') {
+            html += `<div class="grid grid-cols-1 md:grid-cols-12 gap-12 max-w-7xl mx-auto w-full items-center">
+                <div class="md:col-span-5 md:col-start-2 scale-110 md:scale-125 z-10">
+                    ${createBookCardHTML(category.books[0], category.accentColor)}
+                </div>
+                <div class="md:col-span-5 grid grid-cols-2 gap-6">
+                    ${category.books.slice(1, 5).map(b => createBookCardHTML(b, category.accentColor)).join('')}
+                </div>
+            </div>`;
+        } else if (category.layout === 'grid') {
+            html += `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 max-w-7xl mx-auto w-full">`;
+            category.books.forEach((book, idx) => {
+                const stagger = idx % 2 === 0 ? 'translate-y-12' : '';
+                html += `<div class="${stagger}">${createBookCardHTML(book, category.accentColor)}</div>`;
+            });
+            html += `</div>`;
+        } else if (category.layout === 'carousel') {
+            html += `<div class="w-full relative group">
+                <div class="absolute left-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-r from-slate-50 to-transparent dark:from-black dark:to-transparent z-10 pointer-events-none"></div>
+                <div class="absolute right-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-l from-slate-50 to-transparent dark:from-black dark:to-transparent z-10 pointer-events-none"></div>
+                <button onclick="carouselScrollLeft('${category.id}')" class="absolute left-8 md:left-12 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 backdrop-blur-md border border-black/10 dark:border-white/20 text-slate-900 dark:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-white hover:text-black hover:scale-110">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+                </button>
+                <button onclick="carouselScrollRight('${category.id}')" class="absolute right-8 md:right-12 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 backdrop-blur-md border border-black/10 dark:border-white/20 text-slate-900 dark:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-white hover:text-black hover:scale-110">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+                </button>
+                <div id="carousel-${category.id}" class="flex overflow-x-auto gap-8 md:gap-12 pb-12 pt-12 px-8 md:px-16 snap-x snap-mandatory hide-scrollbar items-center scroll-smooth">
+                    ${category.books.map(book => `<div class="snap-center shrink-0 w-[260px] md:w-[320px] transition-all duration-500 hover:-translate-y-2">${createBookCardHTML(book, category.accentColor)}</div>`).join('')}
+                    <div class="shrink-0 w-8 md:w-16"></div>
+                </div>
+            </div>`;
+        }
+
+        html += `</section>`;
+    });
+
+    container.innerHTML = html;
+}
+
+// ==================== NAV DOTS ====================
+function renderNavDots() {
+    const nav = document.getElementById('navDots');
+    let html = `<button onclick="scrollToSection('hero')" class="nav-dot w-2 h-2 rounded-full transition-all duration-300" data-section="hero"></button>`;
+    CATEGORIES.forEach(cat => {
+        html += `<button onclick="scrollToSection('${cat.id}')" class="nav-dot w-2 h-2 rounded-full transition-all duration-300" data-section="${cat.id}" data-accent="${cat.accentColor}"></button>`;
+    });
+    nav.innerHTML = html;
+    updateNavDots();
+}
+
+function updateNavDots() {
+    document.querySelectorAll('.nav-dot').forEach(dot => {
+        const section = dot.dataset.section;
+        const isActive = section === activeSection;
+        if (isActive) {
+            dot.style.transform = 'scale(1.5)';
+            if (section === 'hero') {
+                dot.style.backgroundColor = isDark ? '#ffffff' : '#000000';
+            } else {
+                dot.style.backgroundColor = dot.dataset.accent;
+            }
+        } else {
+            dot.style.transform = 'scale(1)';
+            dot.style.backgroundColor = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
+        }
+    });
+}
+
+// ==================== MENU NAV ====================
+function renderMenuNav() {
+    const nav = document.getElementById('menuNav');
+    let html = `<button onclick="scrollToSection('hero'); toggleMenu()" class="text-left text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white transition-colors">Home</button>`;
+    CATEGORIES.forEach(cat => {
+        html += `<button onclick="scrollToSection('${cat.id}'); toggleMenu()" class="text-left text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white transition-colors">${escapeHtml(cat.name)}</button>`;
+    });
+    nav.innerHTML = html;
+}
+
+// ==================== THEME ====================
+function updateThemeButtons() {
+    const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" /></svg>`;
+    const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" /></svg>`;
+
+    document.getElementById('headerThemeBtn').innerHTML = isDark ? sunIcon : moonIcon;
+    document.getElementById('headerThemeBtn').title = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+
+    const menuBtn = document.getElementById('menuThemeBtn');
+    if (isDark) {
+        menuBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-yellow-400"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" /></svg><span class="text-xs font-medium text-white">Light</span>`;
+    } else {
+        menuBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-slate-700"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" /></svg><span class="text-xs font-medium text-slate-900">Dark</span>`;
+    }
+}
+
+function toggleTheme() {
+    isDark = !isDark;
+    if (isDark) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+    }
+    updateThemeButtons();
+    updateNavDots();
+    updateScrollProgressColor();
+}
+
+// ==================== SCROLL ====================
+function updateScrollProgressColor() {
+    document.getElementById('scrollProgress').style.backgroundColor = getCurrentAccentColor();
+}
+
+window.addEventListener('scroll', () => {
+    const scrollY = window.scrollY;
+    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+
+    if (height > 0) {
+        document.getElementById('scrollProgress').style.width = (scrollY / height) * 100 + '%';
+    }
+
+    // FAB
+    const fab = document.getElementById('fabBtn');
+    if (scrollY > window.innerHeight) {
+        fab.classList.remove('translate-y-24', 'opacity-0');
+    } else {
+        fab.classList.add('translate-y-24', 'opacity-0');
+    }
+
+    // Detect active section
+    const sections = ['hero', ...CATEGORIES.map(c => c.id)];
+    for (const id of sections) {
+        const el = document.getElementById(id);
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            if (rect.top <= window.innerHeight / 2 && rect.bottom >= window.innerHeight / 2) {
+                if (activeSection !== id) {
+                    activeSection = id;
+                    updateNavDots();
+                    updateScrollProgressColor();
+                }
+                break;
+            }
+        }
+    }
+});
+
+// ==================== NAVIGATION ====================
+function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ==================== SEARCH ====================
+function openSearch() {
+    const overlay = document.getElementById('searchOverlay');
+    overlay.classList.remove('hidden');
+    overlay.classList.add('animate-fade-in');
+    setTimeout(() => document.getElementById('searchInput').focus(), 50);
+}
+
+function closeSearch() {
+    document.getElementById('searchOverlay').classList.add('hidden');
+    document.getElementById('searchInput').value = '';
+    searchQuery = '';
+    renderSearchResults();
+}
+
+function updateSearch(value) {
+    searchQuery = value;
+    renderSearchResults();
+}
+
+function renderSearchResults() {
+    const container = document.getElementById('searchResults');
+    const q = searchQuery.toLowerCase().trim();
+
+    if (!q) {
+        container.innerHTML = `<div class="text-center text-slate-300 dark:text-white/20 py-20"><p class="text-sm uppercase tracking-[0.2em]">Begin typing to explore the collection</p></div>`;
+        return;
+    }
+
+    const filtered = getAllBooks().filter(b =>
+        b.title.toLowerCase().includes(q) ||
+        b.author.toLowerCase().includes(q) ||
+        b.tags.some(t => t.toLowerCase().includes(q))
+    );
+
+    if (filtered.length > 0) {
+        let html = `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 pb-20">`;
+        filtered.forEach((book, i) => {
+            html += `<div class="group relative animate-fade-up" style="animation-delay:${i * 50}ms">
+                ${createBookCardHTML(book, '#888888')}
+                <div class="mt-3 opacity-60 text-[10px] uppercase tracking-widest text-slate-900 dark:text-white text-center">${escapeHtml(book.category)}</div>
+            </div>`;
+        });
+        html += `</div>`;
+        container.innerHTML = html;
+        initBookCardListeners(container);
+    } else {
+        container.innerHTML = `<div class="text-center text-slate-400 dark:text-white/40 py-20">
+            <p class="text-xl serif italic mb-2">No masterpieces found</p>
+            <p class="text-sm">Try searching for "${escapeHtml(searchQuery)}" in a different category</p>
+        </div>`;
+    }
+}
+
+// ==================== MENU ====================
+function toggleMenu() {
+    const overlay = document.getElementById('menuOverlay');
+    if (overlay.classList.contains('hidden')) {
+        overlay.classList.remove('hidden');
+        overlay.classList.add('animate-fade-in');
+    } else {
+        overlay.classList.add('hidden');
+    }
+}
+
+// ==================== MODAL ====================
+function openModal(bookId) {
+    const book = getAllBooks().find(b => b.id === bookId);
+    if (!book) return;
+    activeBook = book;
+
+    document.getElementById('modalCover').style.background = book.gradient;
+    document.getElementById('modalBg').style.background = `radial-gradient(circle at center, ${book.gradient.split(',')[1]}, transparent 70%)`;
+    document.getElementById('modalTitle').textContent = book.title;
+    document.getElementById('modalAuthor').textContent = book.author;
+    document.getElementById('modalDetailTitle').textContent = book.title;
+    document.getElementById('modalSubtitle').textContent = `${book.category} Collection, ${book.year}`;
+    document.getElementById('modalDesc').textContent = book.description;
+    document.getElementById('modalPages').textContent = book.specs.pages + ' Pages';
+    document.getElementById('modalFormat').textContent = book.specs.format;
+    document.getElementById('modalLang').textContent = book.specs.language;
+    document.getElementById('modalSize').textContent = book.specs.fileSize;
+
+    const tagsHtml = book.tags.map(t => `<span class="px-3 py-1 rounded-full text-[10px] uppercase tracking-wider bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/70 border border-slate-200 dark:border-white/10">${escapeHtml(t)}</span>`).join('');
+    document.getElementById('modalTags').innerHTML = tagsHtml;
+
+    const modal = document.getElementById('bookModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('animate-fade-in');
+}
+
+function closeModal() {
+    document.getElementById('bookModal').classList.add('hidden');
+    activeBook = null;
+}
+
+// ==================== CAROUSEL ====================
+function initCarousels() {
+    // Clear any existing intervals
+    carouselIntervals.forEach(ci => clearInterval(ci.interval));
+    carouselIntervals = [];
+
+    CATEGORIES.filter(c => c.layout === 'carousel').forEach(cat => {
+        const el = document.getElementById(`carousel-${cat.id}`);
+        if (!el) return;
+
+        let isPaused = false;
+        const scrollStep = 320;
+
+        const interval = setInterval(() => {
+            if (!isPaused) {
+                const maxScroll = el.scrollWidth - el.clientWidth;
+                if (el.scrollLeft >= maxScroll - 5) {
+                    el.scrollTo({ left: 0, behavior: 'smooth' });
+                } else {
+                    el.scrollTo({ left: el.scrollLeft + scrollStep, behavior: 'smooth' });
+                }
+            }
+        }, 3000);
+
+        el.addEventListener('mouseenter', () => { isPaused = true; });
+        el.addEventListener('mouseleave', () => { isPaused = false; });
+
+        carouselIntervals.push({ id: cat.id, interval, el });
+    });
+}
+
+function carouselScrollLeft(catId) {
+    const el = document.getElementById(`carousel-${catId}`);
+    if (!el) return;
+    const scrollStep = 320;
+    if (el.scrollLeft <= 0) {
+        el.scrollTo({ left: el.scrollWidth, behavior: 'smooth' });
+    } else {
+        el.scrollTo({ left: el.scrollLeft - scrollStep, behavior: 'smooth' });
+    }
+}
+
+function carouselScrollRight(catId) {
+    const el = document.getElementById(`carousel-${catId}`);
+    if (!el) return;
+    const scrollStep = 320;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (el.scrollLeft >= maxScroll - 5) {
+        el.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+        el.scrollTo({ left: el.scrollLeft + scrollStep, behavior: 'smooth' });
+    }
+}
+
+// ==================== BOOK CARD INTERACTIONS ====================
+function initBookCardListeners(root) {
+    root = root || document;
+    root.querySelectorAll('.book-card-host').forEach(host => {
+        // Skip if already initialized
+        if (host._initialized) return;
+        host._initialized = true;
+
+        const card = host.querySelector('.book-card');
+        const inner = host.querySelector('.book-card-inner');
+        const views = host.querySelectorAll('.book-view');
+        const accentColor = host.dataset.accent;
+        const bookId = host.dataset.bookId;
+
+        let isHovered = false;
+        let activeIdx = 0;
+        let cycleInterval = null;
+
+        function showView(idx) {
+            views.forEach(v => {
+                v.style.opacity = parseInt(v.dataset.view) === idx ? '1' : '0';
+            });
+        }
+
+        card.addEventListener('mouseenter', () => {
+            isHovered = true;
+            inner.style.boxShadow = `0 20px 40px -10px ${accentColor}66`;
+            cycleInterval = setInterval(() => {
+                activeIdx = (activeIdx + 1) % 6;
+                showView(activeIdx);
+            }, 800);
+        });
+
+        card.addEventListener('mouseleave', () => {
+            isHovered = false;
+            activeIdx = 0;
+            showView(0);
+            inner.style.transform = '';
+            inner.style.boxShadow = '0 10px 30px -10px rgba(0,0,0,0.5)';
+            if (cycleInterval) { clearInterval(cycleInterval); cycleInterval = null; }
+        });
+
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const rotateY = ((x - centerX) / centerX) * 15;
+            const rotateX = -((y - centerY) / centerY) * 15;
+            inner.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+        });
+
+        card.addEventListener('click', () => {
+            openModal(bookId);
+        });
+    });
+}
+
+// ==================== ESCAPE KEY ====================
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('searchOverlay').classList.contains('hidden')) {
+            closeSearch();
+        }
+        if (!document.getElementById('bookModal').classList.contains('hidden')) {
+            closeModal();
+        }
+        if (!document.getElementById('menuOverlay').classList.contains('hidden')) {
+            toggleMenu();
+        }
+    }
+});
+
+// ==================== INIT ====================
+function init() {
+    renderCategories();
+    renderNavDots();
+    renderMenuNav();
+    updateThemeButtons();
+    updateScrollProgressColor();
+    initBookCardListeners();
+    initCarousels();
+}
+
+init();
+</script>
 </body>
 </html>
