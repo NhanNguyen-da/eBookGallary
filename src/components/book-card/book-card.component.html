@@ -1,0 +1,104 @@
+<div 
+  #card
+  class="relative w-full aspect-[2/3] cursor-pointer group"
+  (mousemove)="onMouseMove($event)"
+  (mouseenter)="onMouseEnter()"
+  (mouseleave)="onMouseLeave()"
+  (click)="openDetails()"
+>
+  <!-- Main Animated Container -->
+  <div 
+    class="w-full h-full rounded-lg shadow-2xl transition-transform duration-100 ease-out will-change-transform transform-style-3d relative"
+    [style.transform]="cardTransform()"
+    [style.box-shadow]="isHovered() ? '0 20px 40px -10px ' + accentColor() + '66' : '0 10px 30px -10px rgba(0,0,0,0.5)'"
+  >
+    <!-- View Layers: Only one is visible/opaque based on index -->
+    
+    <!-- 0: Front Cover -->
+    <div 
+      class="absolute inset-0 w-full h-full rounded-lg overflow-hidden transition-opacity duration-500 flex flex-col justify-end p-6 border border-black/5 dark:border-white/10"
+      [style.background]="coverGradient()"
+      [class.opacity-0]="activeImageIndex() !== 0"
+      [class.opacity-100]="activeImageIndex() === 0"
+    >
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+        <div class="relative z-10 transform translate-z-10">
+            <h3 class="text-xl font-bold text-white serif mb-1 leading-tight shadow-black drop-shadow-md">{{ book().title }}</h3>
+            <p class="text-sm text-white/80 font-light">{{ book().author }}</p>
+        </div>
+        <!-- Shine effect -->
+        <div class="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+    </div>
+
+    <!-- 1: Angled View (Simulated with transform and gradient shift) -->
+    <!-- Changed bg to always be light (zinc-100) to simulate paper/physical object, even in dark mode -->
+    <div 
+      class="absolute inset-0 w-full h-full rounded-lg overflow-hidden transition-opacity duration-500 flex items-center justify-center bg-zinc-100 border border-black/5"
+      [class.opacity-0]="activeImageIndex() !== 1"
+      [class.opacity-100]="activeImageIndex() === 1"
+    >
+        <!-- Mini simulation of angled book -->
+        <div class="w-3/4 h-3/4 rounded relative transform -rotate-12 scale-90 shadow-2xl" [style.background]="coverGradient()">
+            <div class="absolute left-0 top-0 bottom-0 w-2 bg-white/20 blur-[1px]"></div>
+        </div>
+        <!-- Text is always slate-400 to contrast with zinc-100 background -->
+        <span class="absolute bottom-4 text-xs text-slate-400 tracking-widest uppercase">Perspective</span>
+    </div>
+
+    <!-- 2: Spine View -->
+    <!-- Changed bg to always be light (zinc-100) -->
+    <div 
+      class="absolute inset-0 w-full h-full rounded-lg overflow-hidden transition-opacity duration-500 flex flex-col items-center justify-center bg-zinc-100 border border-black/5"
+      [class.opacity-0]="activeImageIndex() !== 2"
+      [class.opacity-100]="activeImageIndex() === 2"
+    >
+         <div class="w-16 h-full shadow-2xl flex flex-col items-center justify-center relative" [style.background]="spineGradient()">
+            <span class="rotate-90 text-white font-bold whitespace-nowrap text-lg tracking-wider">{{ book().title }}</span>
+            <div class="absolute bottom-10 w-8 h-8 rounded-full bg-white/20"></div>
+         </div>
+         <span class="absolute bottom-4 text-xs text-slate-400 tracking-widest uppercase">Spine</span>
+    </div>
+
+    <!-- 3: Back Cover -->
+    <div 
+      class="absolute inset-0 w-full h-full rounded-lg overflow-hidden transition-opacity duration-500 p-6 border border-black/5 dark:border-white/10 flex flex-col items-center justify-center text-center"
+      [style.background]="backGradient()"
+      [class.opacity-0]="activeImageIndex() !== 3"
+      [class.opacity-100]="activeImageIndex() === 3"
+    >
+        <div class="text-white/90 text-xs leading-relaxed italic line-clamp-6 mb-4">
+            "{{ book().description }}"
+        </div>
+        <div class="text-[10px] text-white/40 uppercase tracking-widest">Praise for {{ book().author }}</div>
+        <span class="absolute bottom-4 text-xs text-white/50 tracking-widest uppercase">Back Cover</span>
+    </div>
+
+    <!-- 4: Interior 1 -->
+    <div 
+      class="absolute inset-0 w-full h-full rounded-lg overflow-hidden transition-opacity duration-500 border border-black/5 dark:border-white/10 p-4"
+      [style.background]="interiorGradient()"
+      [class.opacity-0]="activeImageIndex() !== 4"
+      [class.opacity-100]="activeImageIndex() === 4"
+    >
+        <div class="w-full h-full flex flex-col text-[8px] text-black/60 overflow-hidden select-none font-serif leading-relaxed opacity-70">
+            <h4 class="text-base text-black mb-4 font-bold text-center">Chapter One</h4>
+            <p class="mb-2 text-justify">It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in</p>
+            <p class="text-justify">order to escape the vile wind, slipped quickly through the glass doors of Victory Mansions, though not quickly enough to prevent a swirl of gritty dust from entering along with him.</p>
+            <p class="text-justify indent-2">The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster, too large for indoor display, had been tacked to the wall.</p>
+        </div>
+        <span class="absolute bottom-2 right-4 text-[8px] text-black/30">1</span>
+    </div>
+    
+     <!-- 5: Interior 2 -->
+    <div 
+      class="absolute inset-0 w-full h-full rounded-lg overflow-hidden transition-opacity duration-500 border border-black/5 dark:border-white/10 p-4"
+      [style.background]="interiorGradient()"
+      [class.opacity-0]="activeImageIndex() !== 5"
+      [class.opacity-100]="activeImageIndex() === 5"
+    >
+        <div class="w-full h-full flex flex-col text-[8px] text-black/60 overflow-hidden select-none font-serif leading-relaxed opacity-70">
+             <div class="w-full h-24 bg-black/5 mb-4 rounded flex items-center justify-center">
+                <span class="text-[6px] uppercase tracking-widest opacity-50">Illustration</span>
+             </div>
+             <p class="text-justify">It depicted simply an enormous face, more than a meter wide: the face of a man of about forty-five, with a heavy black moustache and ruggedly handsome features.</p>
+             <p class="text-justify indent-2">Winston made for the stairs. It was no use trying the
